@@ -86,7 +86,7 @@ en= OrdinalEncoder(categories = [climate])
 
 df['Embarked']=en.fit_transform(df[["Embarked"]])
 
-df
+df.head()
 
 climate = ['male','female']
 
