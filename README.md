@@ -1,166 +1,316 @@
-# Ex-07-Feature-Selection
+## Ex-07 Feature Selection
+
 ## AIM
 To Perform the various feature selection techniques on a dataset and save the data to a file. 
 
-# Explanation
-Feature selection is to find the best set of features that allows one to build useful models.
-Selecting the best features helps the model to perform well. 
+## Explanation
+Feature selection is to find the best set of features that allows one to build useful models.Selecting the best features helps the model to perform well. 
 
-# ALGORITHM
+## ALGORITHM
 ### STEP 1
+
 Read the given Data
+
 ### STEP 2
+
 Clean the Data Set using Data Cleaning Process
+
 ### STEP 3
+
 Apply Feature selection techniques to all the features of the data set
+
 ### STEP 4
+
 Save the data to the file
 
-# CODE
-```
-Program Developed By:Sathiya Narayanan G
-Register number:212221220049
-from sklearn.datasets import load_boston
-boston_data=load_boston()
+
+## CODE
+
 import pandas as pd
-boston = pd.DataFrame(boston_data.data, columns=boston_data.feature_names)
-boston['MEDV'] = boston_data.target
-dummies = pd.get_dummies(boston.RAD)
-boston = boston.drop(columns='RAD').merge(dummies,left_index=True,right_index=True)
-X = boston.drop(columns='MEDV')
-y = boston.MEDV
-boston.head(10)
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
-from sklearn.model_selection import KFold
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import cross_val_predict
-from sklearn.linear_model import LinearRegression
-from math import sqrt
+import numpy as np
 
-cv = KFold(n_splits=10, random_state=None, shuffle=False)
-classifier_pipeline = make_pipeline(StandardScaler(), KNeighborsRegressor(n_neighbors=10))
-y_pred = cross_val_predict(classifier_pipeline, X, y, cv=cv)
-print("RMSE: " + str(round(sqrt(mean_squared_error(y,y_pred)),2)))
-print("R_squared: " + str(round(r2_score(y,y_pred),2)))
-
-boston.var()
-
-X = X.drop(columns = ['NOX','CHAS'])
-y_pred = cross_val_predict(classifier_pipeline, X, y, cv=cv)
-print("RMSE: " + str(round(sqrt(mean_squared_error(y,y_pred)),2)))
-print("R_squared: " + str(round(r2_score(y,y_pred),2)))
-
-# Filter Features by Correlation
-import seaborn as sn
 import matplotlib.pyplot as plt
-fig_dims = (12, 8)
-fig, ax = plt.subplots(figsize=fig_dims)
-sn.heatmap(boston.corr(), ax=ax)
+
+df=pd.read_csv('/content/titanic_dataset.csv')
+
+df.head()
+
+df.isnull().sum()
+
+df.drop('Cabin',axis=1,inplace=True)
+
+df.drop('Name',axis=1,inplace=True)
+
+df.drop('Ticket',axis=1,inplace=True)
+
+df.drop('PassengerId',axis=1,inplace=True)
+
+df.drop('Parch',axis=1,inplace=True)
+
+df
+
+df['Age']=df['Age'].fillna(df['Age'].median())
+
+df['Embarked']=df['Embarked'].fillna(df['Embarked'].mode()[0])
+
+df.isnull().sum()
+
+plt.title("Dataset with outliers")
+
+df.boxplot()
+
 plt.show()
-abs(boston.corr()["MEDV"])
-abs(boston.corr()["MEDV"][abs(boston.corr()["MEDV"])>0.5].drop('MEDV')).index.tolist()
-vals = [0.1,0.2,0.3,0.4,0.5,0.6,0.7]
-for val in vals:
-    features = abs(boston.corr()["MEDV"][abs(boston.corr()["MEDV"])>val].drop('MEDV')).index.tolist()
+
+cols = ['Age','SibSp','Fare']
+
+Q1 = df[cols].quantile(0.25)
+
+Q3 = df[cols].quantile(0.75)
+
+IQR = Q3 - Q1
+
+df = df[~((df[cols] < (Q1 - 1.5 * IQR)) |(df[cols] > (Q3 + 1.5 * IQR))).any(axis=1)]
+
+plt.title("Dataset after removing outliers")
+
+df.boxplot()
+
+plt.show()
+
+from sklearn.preprocessing import OrdinalEncoder
+
+climate = ['C','S','Q']
+
+en= OrdinalEncoder(categories = [climate])
+
+df['Embarked']=en.fit_transform(df[["Embarked"]])
+
+df
+
+climate = ['male','female']
+
+en= OrdinalEncoder(categories = [climate])
+
+df['Sex']=en.fit_transform(df[["Sex"]])
+
+df
+
+from sklearn.preprocessing import RobustScaler
+
+sc=RobustScaler()
+
+df=pd.DataFrame(sc.fit_transform(df),columns=['Survived','Pclass','Sex','Age','SibSp','Fare','Embarked'])
+
+df
+
+import statsmodels.api as sm
+
+import numpy as np
+
+import scipy.stats as stats
+
+from sklearn.preprocessing import QuantileTransformer
+
+qt=QuantileTransformer(output_distribution='normal',n_quantiles=692)
+
+df1=pd.DataFrame()
+
+df1["Survived"]=np.sqrt(df["Survived"])
+
+df1["Pclass"],parameters=stats.yeojohnson(df["Pclass"])
+
+df1["Sex"]=np.sqrt(df["Sex"])
+
+df1["Age"]=df["Age"]
+
+df1["SibSp"],parameters=stats.yeojohnson(df["SibSp"])
+
+df1["Fare"],parameters=stats.yeojohnson(df["Fare"])
+
+df1["Embarked"]=df["Embarked"]
+
+df1.skew()
+
+import matplotlib
+
+import seaborn as sns
+
+import statsmodels.api as sm
+
+%matplotlib inline
+
+from sklearn.model_selection import train_test_split
+
+from sklearn.linear_model import LinearRegression
+
+from sklearn.feature_selection import RFE
+
+from sklearn.linear_model import RidgeCV, LassoCV, Ridge, Lasso
+
+X = df1.drop("Survived",1) 
+
+y = df1["Survived"]   
+
+plt.figure(figsize=(12,10))
+
+cor = df1.corr()
+
+sns.heatmap(cor, annot=True, cmap=plt.cm.RdPu)
+
+plt.show()
+
+cor_target = abs(cor["Survived"])
+
+relevant_features = cor_target[cor_target>0.5]
+
+relevant_features
+
+X_1 = sm.add_constant(X)
+
+model = sm.OLS(y,X_1).fit()
+
+model.pvalues
+
+cols = list(X.columns)
+
+pmax = 1
+
+while (len(cols)>0):
+
+    p= []
     
-    X = boston.drop(columns='MEDV')
-    X=X[features]
+    X_1 = X[cols]
     
-    print(features)
+    X_1 = sm.add_constant(X_1)
+    
+    model = sm.OLS(y,X_1).fit()
+    
+    p = pd.Series(model.pvalues.values[1:],index = cols)  
+    
+    pmax = max(p)
+    
+    feature_with_p_max = p.idxmax()
+    
+    if(pmax>0.05):
+    
+        cols.remove(feature_with_p_max)
+        
+    else:
+    
+        break
+        
+selected_features_BE = cols
 
-    y_pred = cross_val_predict(classifier_pipeline, X, y, cv=cv)
-    print("RMSE: " + str(round(sqrt(mean_squared_error(y,y_pred)),2)))
-    print("R_squared: " + str(round(r2_score(y,y_pred),2)))
+print(selected_features_BE)
 
-# Feature Selection Using a Wrapper
+model = LinearRegression()
 
-boston = pd.DataFrame(boston_data.data, columns=boston_data.feature_names)
-boston['MEDV'] = boston_data.target
-boston['RAD'] = boston['RAD'].astype('category')
-dummies = pd.get_dummies(boston.RAD)
-boston = boston.drop(columns='RAD').merge(dummies,left_index=True,right_index=True)
-X = boston.drop(columns='MEDV')
-y = boston.MEDV
+rfe = RFE(model,step= 4)
 
-from mlxtend.feature_selection import SequentialFeatureSelector as SFS
+X_rfe = rfe.fit_transform(X,y)  
 
-sfs1 = SFS(classifier_pipeline, 
-           k_features=1, 
-           forward=False, 
-           scoring='neg_mean_squared_error',
-           cv=cv)
+model.fit(X_rfe,y)
 
-X = boston.drop(columns='MEDV')
-sfs1.fit(X,y)
-sfs1.subsets_
+print(rfe.support_)
 
-X = boston.drop(columns='MEDV')[['CRIM','RM','PTRATIO','LSTAT']]
-y = boston['MEDV']
-y_pred = cross_val_predict(classifier_pipeline, X, y, cv=cv)
-print("RMSE: " + str(round(sqrt(mean_squared_error(y,y_pred)),3)))
-print("R_squared: " + str(round(r2_score(y,y_pred),3)))
+print(rfe.ranking_)
 
-boston[['CRIM','RM','PTRATIO','LSTAT','MEDV']].corr()
+nof_list=np.arange(1,6)   
 
-boston['RM*LSTAT']=boston['RM']*boston['LSTAT']
+high_score=0
 
-X = boston.drop(columns='MEDV')[['CRIM','RM','PTRATIO','LSTAT']]
-y = boston['MEDV']
-y_pred = cross_val_predict(classifier_pipeline, X, y, cv=cv)
-print("RMSE: " + str(round(sqrt(mean_squared_error(y,y_pred)),3)))
-print("R_squared: " + str(round(r2_score(y,y_pred),3)))
+nof=0    
 
-sn.pairplot(boston[['CRIM','RM','PTRATIO','LSTAT','MEDV']])
+score_list =[]
 
-boston = boston.drop(boston[boston['MEDV']==boston['MEDV'].max()].index.tolist())
+for n in range(len(nof_list)):
 
-X = boston.drop(columns='MEDV')[['CRIM','RM','PTRATIO','LSTAT','RM*LSTAT']]
-y = boston['MEDV']
-y_pred = cross_val_predict(classifier_pipeline, X, y, cv=cv)
-print("RMSE: " + str(round(sqrt(mean_squared_error(y,y_pred)),3)))
-print("R_squared: " + str(round(r2_score(y,y_pred),3)))
+    X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.3, random_state = 0)
+    
+    model = LinearRegression()
+    
+    rfe = RFE(model,step=nof_list[n])
+    
+    X_train_rfe = rfe.fit_transform(X_train,y_train)
+    
+    X_test_rfe = rfe.transform(X_test)
+    
+    model.fit(X_train_rfe,y_train)
+    
+    score = model.score(X_test_rfe,y_test)
+    
+    score_list.append(score)
+    
+    if(score>high_score):
+    
+        high_score = score
+        
+        nof = nof_list[n]
+        
+print("Optimum number of features: %d" %nof)
 
-boston['LSTAT_2']=boston['LSTAT']**2
+print("Score with %d features: %f" % (nof, high_score))
 
-X = boston.drop(columns='MEDV')[['CRIM','RM','PTRATIO','LSTAT']]
-y_pred = cross_val_predict(classifier_pipeline, X, y, cv=cv)
-print("RMSE: " + str(round(sqrt(mean_squared_error(y,y_pred)),3)))
-print("R_squared: " + str(round(r2_score(y,y_pred),3)))
-```
+cols = list(X.columns)
 
+model = LinearRegression()
 
-# OUPUT
-![image](https://user-images.githubusercontent.com/94505585/170406591-47feac04-6cc9-4892-b5c3-433f1d8d50bb.png)
-![image](https://user-images.githubusercontent.com/94505585/170406697-6a97d8fd-b310-4352-a30a-c1adfc4a0bcb.png)
-![image](https://user-images.githubusercontent.com/94505585/170406735-a7d9e5a9-c2fa-4879-ac98-26abb47d0ee4.png)
-![image](https://user-images.githubusercontent.com/94505585/170406761-e9529da2-9b56-4590-bb4f-6d52cf94af8b.png)
-![image](https://user-images.githubusercontent.com/94505585/170406784-a6c8952a-a730-477e-9415-a8e3409866fc.png)
-![image](https://user-images.githubusercontent.com/94505585/170406804-8adcb545-9eb2-47f4-a344-c444b038c0a5.png)
-![image](https://user-images.githubusercontent.com/94505585/170406816-235fd4c5-f4f9-4cc7-9054-c284c6925144.png)
-![image](https://user-images.githubusercontent.com/94505585/170406839-a4534b51-9a1f-4628-90ba-38393d30e65f.png)
-![image](https://user-images.githubusercontent.com/94505585/170406858-b2d8e732-8d3a-4284-8e65-9737d5badc74.png)
-![image](https://user-images.githubusercontent.com/94505585/170406874-74641eeb-e3e5-45c4-bc29-9b13309261e0.png)
-![image](https://user-images.githubusercontent.com/94505585/170406890-c590bde6-d009-47ad-9a3d-2ec4f3c16781.png)
-![image](https://user-images.githubusercontent.com/94505585/170406901-b9ab21e5-11ed-4ccb-9f7a-3ef0aaa5dd62.png)
-![image](https://user-images.githubusercontent.com/94505585/170406920-1ed23c3b-fd72-41fb-a5e4-6caf586b9620.png)
-![image](https://user-images.githubusercontent.com/94505585/170406931-60102e9b-3b65-4466-b683-f5941fe113b3.png)
-![image](https://user-images.githubusercontent.com/94505585/170406949-019df07e-1ef1-49fd-880a-6b84c914d1bf.png)
-![image](https://user-images.githubusercontent.com/94505585/170406966-4fafb6f2-64b9-4b47-84ef-b532d498f145.png)
+rfe = RFE(model, step=2) 
 
-### RESULT
-The various feature selection techniques has been performed on a dataset and saved the data to a file.
+X_rfe = rfe.fit_transform(X,y)  
 
+model.fit(X_rfe,y)        
 
+temp = pd.Series(rfe.support_,index = cols)
 
+selected_features_rfe = temp[temp==True].index
 
+print(selected_features_rfe)
 
+reg = LassoCV()
 
+reg.fit(X, y)
 
+print("Best alpha using built-in LassoCV: %f" % reg.alpha_)
 
+print("Best score using built-in LassoCV: %f" %reg.score(X,y))
 
+coef = pd.Series(reg.coef_, index = X.columns)
 
+print("Lasso picked " + str(sum(coef != 0)) + " variables and eliminated the other " +  str(sum(coef == 0)) + " variables")
 
+imp_coef = coef.sort_values()
+
+import matplotlib
+
+matplotlib.rcParams['figure.figsize'] = (8.0, 10.0)
+
+imp_coef.plot(kind = "barh")
+
+plt.title("Feature importance using Lasso Model")
+
+plt.show()
+
+## OUPUT
+
+![op1](https://user-images.githubusercontent.com/112301582/236690606-a1c6b1b4-2e35-4d4d-a378-c6418ede4a16.png)
+![op2](https://user-images.githubusercontent.com/112301582/236690619-dbefe79c-1204-435a-a0e4-a6c978ecccee.png)
+![op3](https://user-images.githubusercontent.com/112301582/236690622-1a3bde39-fe10-4e4c-96b8-38f2068708b0.png)
+![op4](https://user-images.githubusercontent.com/112301582/236690626-b9b72b04-a5f3-44d2-b13f-e4b6bc69eaab.png)
+![op5](https://user-images.githubusercontent.com/112301582/236690628-01c63d83-46a3-4201-aa25-badcc8122cee.png)
+![op6](https://user-images.githubusercontent.com/112301582/236690631-2400b5ec-1a06-4dc3-b0d2-f674bc332c25.png)
+![op7](https://user-images.githubusercontent.com/112301582/236690634-7369159f-5903-44b7-9389-8369b7212161.png)
+![op8](https://user-images.githubusercontent.com/112301582/236690635-e03618d8-864f-4501-a320-b80a12251995.png)
+![op9](https://user-images.githubusercontent.com/112301582/236690637-83e0c1be-31cb-4b95-a95c-31844c66582a.png)
+![op10](https://user-images.githubusercontent.com/112301582/236690638-7ca0edec-5fdd-4b37-ae73-1f2a6a3d973b.png)
+![op11](https://user-images.githubusercontent.com/112301582/236690649-5459ac2f-368d-44ca-a81a-1a46bc39cdb0.png)
+![op12](https://user-images.githubusercontent.com/112301582/236690654-ba155e60-03e0-44f6-a310-a2a04ef35ca0.png)
+![op13](https://user-images.githubusercontent.com/112301582/236690657-d7f26b8a-89da-42da-b729-22b22c06a1dc.png)
+![op14](https://user-images.githubusercontent.com/112301582/236690658-8360e36a-1424-417f-b7c9-cb6516bc3847.png)
+![op15](https://user-images.githubusercontent.com/112301582/236690660-a220a12d-89b8-4722-b0ff-f061ad938e7b.png)
+
+## RESULT
+
+The various feature selection techniques are performed on a dataset and saved the data to a file. 
 
