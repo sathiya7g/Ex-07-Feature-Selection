@@ -48,7 +48,7 @@ df.drop('PassengerId',axis=1,inplace=True)
 
 df.drop('Parch',axis=1,inplace=True)
 
-df
+df.head()
 
 df['Age']=df['Age'].fillna(df['Age'].median())
 
