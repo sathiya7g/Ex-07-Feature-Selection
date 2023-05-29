@@ -94,7 +94,7 @@ en= OrdinalEncoder(categories = [climate])
 
 df['Sex']=en.fit_transform(df[["Sex"]])
 
-df
+df.head()
 
 from sklearn.preprocessing import RobustScaler
 
@@ -102,7 +102,7 @@ sc=RobustScaler()
 
 df=pd.DataFrame(sc.fit_transform(df),columns=['Survived','Pclass','Sex','Age','SibSp','Fare','Embarked'])
 
-df
+df.head()
 
 import statsmodels.api as sm
 
